@@ -107,6 +107,16 @@ sub rewriteQuery {
     return $text;
 }
 
+sub correct_seperators {
+    my ($text, $decimal, $thousands) = @_;
+
+    $text =~ s/(\d)\Q${decimal}\E(\d)/$1\#$2/g;
+    $text =~ s/(\d)\Q${thousands}\E(\d)/$1\,$2/g;
+    $text =~ s/(\d)\#(\d)/$1\.$2/g;
+
+    return $text; 
+}
+
 handle query_nowhitespace => sub {
     my $query = $_;
 
@@ -157,9 +167,12 @@ handle query_nowhitespace => sub {
     while (my ($name, $constant) = each %named_constants) {
         $query =~ s#\b$name\b#($name)#ig;
     }
-    my @numbers = grep { $_ =~ /^$number_re$/ } (split /\s+/, $tmp_expr);
+    # my @numbers = grep { $_ =~ /^$number_re$/ } (split /\s+/, $tmp_expr);
+    my @numbers = $tmp_expr =~ m/$number_re/g;
     my $style = number_style_for(@numbers);
     return unless $style;
+
+   $query = correct_seperators($query, $style->decimal, $style->thousands);
 
     my $spaced_query = prepare_for_frontend($query, $style);
 
