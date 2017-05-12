@@ -102,6 +102,20 @@ sub rewriteQuery {
     return $text;
 }
 
+sub correct_seperators {
+    my ($text, $decimal, $thousands) = @_;
+
+    print($decimal);
+    print("\n");
+    print($thousands);
+
+    $text =~ s/(\d)\Q${decimal}(\d)/$1\#$2/g;
+    $text =~ s/(\d)\Q${thousands}(\d)/$1\,$2/g;
+    $text =~ s/(\d)\#(\d)/$1\.$2/g;
+
+    return $text; 
+}
+
 handle query_nowhitespace => sub {
     my $query = $_;
 
@@ -118,6 +132,7 @@ handle query_nowhitespace => sub {
             }
         };
     }
+
 
     return unless $query =~ m/[0-9τπe]|tau|pi/;
     return if $req->query_lc =~ /^0x/i; # hex maybe?
@@ -143,6 +158,7 @@ handle query_nowhitespace => sub {
         $query =~ s#$name#$operation#xig;    # We want these ones to show later.
     }
 
+
     # Now sub in constants
     while (my ($name, $constant) = each %named_constants) {
         $query =~ s#\b$name\b#($name)#ig;
@@ -150,6 +166,8 @@ handle query_nowhitespace => sub {
     my @numbers = grep { $_ =~ /^$number_re$/ } (split /\s+/, $tmp_expr);
     my $style = number_style_for(@numbers);
     return unless $style;
+
+    $query = correct_seperators($query, $style->decimal, $style->thousands);
 
     my $spaced_query = prepare_for_frontend($query, $style);
 
